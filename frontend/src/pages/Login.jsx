@@ -89,21 +89,24 @@ export default function Login() {
 
 
 
-<Input
-              label="Email"
-              type="email"
-              id="login-email"
-              autoComplete="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mb-4"
-            />
 
-<div className="relative">
-                <Input
-                  label="Password"
-                  type={showPassword ? "text" : "password"}
+            <div className="w-full mb-4">
+              <Input
+                label="Email"
+                type="email"
+                id="login-email"
+                autoComplete="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+
+            <div className="relative w-full mb-6">
+              <Input
+                label="Password"
+                type={showPassword ? "text" : "password"}
+
                   id="login-password"
                   autoComplete="current-password"
                   placeholder="Enter your password"
