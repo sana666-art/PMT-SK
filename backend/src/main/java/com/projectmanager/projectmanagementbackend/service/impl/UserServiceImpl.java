@@ -190,19 +190,25 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public String uploadAvatar(String email, MultipartFile file) {
+
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         try {
-            // Cloudinary integration
-            AtomicReference<Map> uploadResult = new AtomicReference<>(cloudinary.uploader().upload(
+            var uploadResult = cloudinary.uploader().upload(
                     file.getBytes(),
-                    ObjectUtils.asMap("folder", "avatars", "public_id", "user_" + user.getId())
-            ));
+                    ObjectUtils.asMap(
+                            "folder", "avatars",
+                            "public_id", "user_" + user.getId(),
+                            "overwrite", true
+                    )
+            );
 
-            String url = (String) uploadResult.get().get("secure_url");
+            String url = (String) uploadResult.get("secure_url");
+
             user.setAvatarUrl(url);
             userRepository.save(user);
+
             return url;
 
         } catch (IOException | java.io.IOException e) {
