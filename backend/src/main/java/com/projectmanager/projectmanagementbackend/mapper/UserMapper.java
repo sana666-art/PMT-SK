@@ -15,6 +15,7 @@ public class UserMapper {
                 .email(user.getEmail())
                 .role(String.valueOf(user.getRole()))
                 .createdAt(user.getCreatedAt())
+                .avatarUrl(user.getAvatarUrl())
                 .build();
     }
 }
