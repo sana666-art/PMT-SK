@@ -1,7 +1,6 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: 'http://localhost:8081/api',
   headers: {
     'Content-Type': 'application/json'
   }
@@ -10,10 +9,10 @@ const API = axios.create({
 // attach token to all requests
 API.interceptors.request.use((req) => {
   const token = localStorage.getItem("token");
-  if (token && !req.url.includes('/auth/register') && !req.url.includes('/auth/login')) {
+  if (token && !req.url?.includes('auth')) {
     req.headers.Authorization = `Bearer ${token}`;
   }
-  console.log('API Request:', req.method?.toUpperCase(), req.url, { auth: !!token });
+  console.log('API Request:', req.method?.toUpperCase(), req.url, req.baseURL ? `${req.baseURL}${req.url}` : req.url, { auth: !!token });
   return req;
 });
 
