@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar';
 import FeaturesSection from '../components/FeaturesSection';
 import StatCard from '../components/StatCard';
 import { getDashboardStats } from '../api/dashboardApi';
+import { getProfile } from '../api/userApi';
 import { useAuth } from '../context/AuthContext';
 import { Users, Folder, CheckCircle, Activity, Plus } from 'lucide-react';
 
@@ -12,20 +13,31 @@ const UserHome = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-const userName = localStorage.getItem('userName') || 'John Doe';
+  const [userName, setUserName] = useState(localStorage.getItem('userName') || 'Loading...');
+
 
   useEffect(() => {
-    const loadStats = async () => {
+    const loadData = async () => {
       try {
         setLoading(true);
+        // Fetch user profile
+        const profileRes = await getProfile();
+        setUserName((profileRes.data.data.name || 'User').charAt(0).toUpperCase() + (profileRes.data.data.name || 'User').slice(1).toLowerCase());
+
+        
+        // Fetch dashboard stats
+        const statsRes = await getDashboardStats();
+        setStats(statsRes.data.data);
       } catch (err) {
-        console.error(err);
+        console.error('Load data error:', err);
+        setUserName((localStorage.getItem('userName') || 'User').charAt(0).toUpperCase() + (localStorage.getItem('userName') || 'User').slice(1).toLowerCase());
       } finally {
         setLoading(false);
       }
     };
-    if (token) loadStats();
+    if (token) loadData();
   }, [token]);
+
 
   if (loading) {
     return (
