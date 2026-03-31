@@ -4,7 +4,7 @@ import Card from "../components/Card";
 import Button from "../components/Button";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getProfile, updateProfile, changePassword, deactivateAccount, uploadAvatar } from "../api/UserApi";
+import { getProfile, updateProfile, changePassword, uploadAvatar, deactivateAccount } from "../api/userApi";
 import toast, { Toaster } from "react-hot-toast";
 
 export default function Profile() {
