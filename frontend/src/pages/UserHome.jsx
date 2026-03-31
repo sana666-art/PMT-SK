@@ -22,7 +22,10 @@ const UserHome = () => {
         setLoading(true);
         // Fetch user profile
         const profileRes = await getProfile();
-        setUserName((profileRes.data.data.name || 'User').charAt(0).toUpperCase() + (profileRes.data.data.name || 'User').slice(1).toLowerCase());
+        console.log('Profile response:', profileRes.data);
+        const name = profileRes.data?.data?.name || 'User';
+        setUserName(name.charAt(0).toUpperCase() + name.slice(1).toLowerCase());
+
 
         
         // Fetch dashboard stats
