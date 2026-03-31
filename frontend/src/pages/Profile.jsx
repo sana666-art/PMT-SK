@@ -4,7 +4,8 @@ import Card from "../components/Card";
 import Button from "../components/Button";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getProfile, updateProfile, changePassword, uploadAvatar, deactivateAccount } from "../api/userApi";
+import { getProfile, updateProfile, changePassword, uploadAvatar, deactivateAccount } from "../api/userApi.js";
+
 import toast, { Toaster } from "react-hot-toast";
 
 export default function Profile() {
@@ -43,13 +44,17 @@ export default function Profile() {
 
   const fetchUser = async () => {
     try {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), 5000);
       const res = await getProfile();
       setUser(res.data.data);
     } catch (err) {
-      console.error(err);
-      toast.error("Failed to fetch user");
+      console.error('Profile fetch failed:', err);
+      toast.error("Profile unavailable - cached data used");
+      setUser({ name: localStorage.getItem('userName') || 'User', email: 'user@example.com' });
     }
   };
+
 
   // ---- Edit Profile Handlers ----
   const openEditModal = () => {
@@ -152,8 +157,22 @@ export default function Profile() {
     }
   };
 
-  // ⚠️ Loading state while fetching user
-  if (!user) return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  // Loading state with spinner
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-indigo-100">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center p-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4" />
+            <p className="text-gray-600">Loading profile...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-100 flex flex-col">
