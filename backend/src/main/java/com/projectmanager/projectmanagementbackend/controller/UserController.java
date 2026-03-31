@@ -115,22 +115,6 @@ public class UserController {
     }
 
     @PreAuthorize("isAuthenticated()")
-    @PostMapping("/upload-avatar")
-    public ResponseEntity<ApiResponse<String>> uploadAvatar(
-            Authentication authentication,
-            @RequestParam("file") MultipartFile file
-    ) {
-
-        String email = authentication.getName();
-
-        String avatarUrl = userService.uploadAvatar(email, file);
-
-        return ResponseEntity.ok(
-                new ApiResponse<>(true, "Avatar uploaded", avatarUrl)
-        );
-    }
-
-    @PreAuthorize("isAuthenticated()")
     @PutMapping("/me/avatar")
     public ResponseEntity<ApiResponse<String>> uploadAvatar(
             @RequestParam("file") MultipartFile file,
