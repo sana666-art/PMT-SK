@@ -6,6 +6,7 @@ import Projects from "./pages/Projects";
 import Tasks from "./pages/Tasks";
 import Users from "./pages/Users";
 import OAuthSuccess from "./pages/OAuthSuccess";
+import RegistrationSuccess from "./pages/RegistrationSuccess";
 import Profile from "./pages/Profile";
 import Home from "./pages/Home";
 import UserHome from "./pages/UserHome";
@@ -21,6 +22,7 @@ function App() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/registration-success" element={<RegistrationSuccess />} />
       <Route path="/oauth-success" element={<OAuthSuccess />} />
       <Route
         path="/user-home"

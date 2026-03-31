@@ -62,13 +62,8 @@ export default function Register() {
         password: data.password,
       });
 
-      if (res.data.token) {
-        localStorage.setItem('userName', data.name);
-        login(res.data.token);
-        navigate("/user-home");
-      } else {
-        navigate("/login");
-      }
+      localStorage.setItem('userName', data.name);
+      navigate("/registration-success");
     } catch (err) {
       console.error("Register error:", err);
       const msg = err.response?.data?.message || err.message || "Registration failed. Backend may not be running.";
