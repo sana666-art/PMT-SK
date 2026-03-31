@@ -61,8 +61,9 @@ export default function Login() {
       });
       console.log("Login response:", res.data);
       const tokenPayload = res.data.message;
-      localStorage.setItem('userName', 'John Doe'); // Mock; extend API for real
+localStorage.setItem('userName', (emailTrimmed.split('@')[0].replace(/[^a-zA-Z]/g, ' ').trim() || 'User').charAt(0).toUpperCase() + (emailTrimmed.split('@')[0].replace(/[^a-zA-Z]/g, ' ').trim() || 'User').slice(1).toLowerCase()); // Capitalized temp from email
       login(tokenPayload);
+
       // Navigate handled by useEffect watching token
     } catch (err) {
       console.error("Login error:", err.response?.data || err.message);
