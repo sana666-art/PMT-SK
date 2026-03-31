@@ -1,557 +1,383 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-
-import { getProfile, updateProfile, changePassword, deactivateAccount, uploadAvatar } from "../api/userApi";
-import Input from "../components/Input";
-import Button from "../components/Button";
+import Navbar from "../components/Navbar"; 
+import Footer from "../components/Footer";
 import Card from "../components/Card";
-import { useAuth } from "../context/AuthContext.jsx";
-import { useDropzone } from "react-dropzone";
-import imageCompression from "browser-image-compression";
-
-// Dynamic initials background
-function stringToColor(str = "User") {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  let color = "#";
-  for (let i = 0; i < 3; i++) {
-    const value = (hash >> (i * 8)) & 0xff;
-    color += value.toString(16).padStart(2, "0");
-  }
-  return color;
-}
-
-// Loading Skeleton
-const Skeleton = ({ className = "" }) => (
-  <div className={`animate-pulse bg-gray-200 rounded-xl ${className}`} />
-);
-
-const ProfileSkeleton = () => (
-  <div className="space-y-6">
-    <div className="flex items-center space-x-4">
-      <Skeleton className="w-20 h-20 rounded-full" />
-      <div className="space-y-2">
-        <Skeleton className="h-6 w-48" />
-        <Skeleton className="h-4 w-32" />
-      </div>
-    </div>
-    <Card>
-      <div className="space-y-4 p-6">
-        <Skeleton className="h-8 w-32" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Skeleton className="h-12" />
-          <Skeleton className="h-12" />
-        </div>
-      </div>
-    </Card>
-  </div>
-);
+import Button from "../components/Button";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { getProfile, updateProfile, changePassword, deactivateAccount, uploadAvatar } from "../api/UserApi";
+import toast, { Toaster } from "react-hot-toast";
 
 export default function Profile() {
-  const {  setToken } = useAuth();
-  const [user, setUser] = useState(null);
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [changingPassword, setChangingPassword] = useState(false);
 
-  // Form states
-  const [editMode, setEditMode] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-  });
+  // User State
+  const [user, setUser] = useState(null);
+  const initials = user?.name?.charAt(0)?.toUpperCase() || "U";
+
+  // Edit Profile Modal
+  const [showEdit, setShowEdit] = useState(false);
+  const [formData, setFormData] = useState({ name: "" });
+
+  // Change Password Modal
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
+    oldPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // Avatar upload states
-  const [avatarFile, setAvatarFile] = useState(null);
+  // Avatar Upload
   const [avatarPreview, setAvatarPreview] = useState(null);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
-  // Crop states
-  const [cropOpen, setCropOpen] = useState(false);
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [rotation, setRotation] = useState(0);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
-  const cropRef = useRef(null);
+  // Deactivate Account Modal
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [deactivating, setDeactivating] = useState(false);
 
-  const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
-    setCroppedAreaPixels(croppedAreaPixels);
-  }, []);
-
-  // Load user data
+  // Fetch user
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        setLoading(true);
-        const res = await getProfile();
-        setUser(res.data.data);
-        setFormData({
-          name: res.data.data.name || "",
-          email: res.data.data.email || "",
-        });
-        setAvatarPreview(res.data.data.avatarUrl || null);
-      } catch (error) {
-        toast.error("Failed to load profile");
-        navigate("/dashboard");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchUser();
   }, []);
 
-  // Avatar dropzone
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: { "image/*": [] },
-    noClick: uploadingAvatar,
-    noKeyboard: uploadingAvatar,
-    disabled: uploadingAvatar,
-    onDrop: async (acceptedFiles) => {
-      const file = acceptedFiles[0];
-      if (file) {
-        setAvatarFile(file);
-        const preview = URL.createObjectURL(file);
-        setAvatarPreview(preview);
-        setCropOpen(true);
-      }
-    },
-  });
-
-  const handleAvatarUpload = async () => {
-    if (!avatarFile || !croppedAreaPixels) return;
-    
-    setUploadingAvatar(true);
-    
+  const fetchUser = async () => {
     try {
-      // Crop image
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      
-      const img = new Image();
-      img.onload = async () => {
-        const scaleX = img.naturalWidth / img.width;
-        const scaleY = img.naturalHeight / img.height;
-        canvas.width = croppedAreaPixels.width;
-        canvas.height = croppedAreaPixels.height;
-        
-        ctx.drawImage(
-          img,
-          croppedAreaPixels.x * scaleX,
-          croppedAreaPixels.y * scaleY,
-          croppedAreaPixels.width * scaleX,
-          croppedAreaPixels.height * scaleY,
-          0, 0,
-          canvas.width,
-          canvas.height
-        );
-
-        canvas.toBlob(async (croppedBlob) => {
-          const compressedFile = await imageCompression(croppedBlob, {
-            maxSizeMB: 0.2,
-            maxWidthOrHeight: 512,
-          });
-
-          try {
-            const res = await uploadAvatar(compressedFile);
-            setUser({ ...user, avatarUrl: res.data.data });
-            toast.success("Avatar updated successfully!");
-            setAvatarFile(null);
-            setAvatarPreview(res.data.data);
-            setCropOpen(false);
-          } catch (error) {
-            toast.error(error.response?.data?.message || "Upload failed");
-          } finally {
-            setUploadingAvatar(false);
-            setUploadProgress(0);
-          }
-        }, "image/jpeg", 0.9);
-      };
-      img.src = avatarPreview;
-    } catch (error) {
-      toast.error("Image processing failed");
-      setUploadingAvatar(false);
+      const res = await getProfile();
+      setUser(res.data.data);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to fetch user");
     }
   };
 
-  const handleProfileUpdate = async (e) => {
-    e.preventDefault();
-    if (!formData.name.trim()) {
-      toast.error("Name is required");
-      return;
-    }
-    
-    setSaving(true);
+  // ---- Edit Profile Handlers ----
+  const openEditModal = () => {
+    setFormData({ name: user.name });
+    setShowEdit(true);
+  };
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleUpdate = async () => {
     try {
       const res = await updateProfile(formData);
-      setUser({ ...user, ...res.data.data });
-      setEditMode(false);
-      toast.success("Profile updated successfully!");
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Update failed");
-    } finally {
-      setSaving(false);
+      setUser(res.data.data);
+      setShowEdit(false);
+      toast.success("Profile updated!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update profile");
     }
   };
 
-  const handlePasswordChange = async (e) => {
-    e.preventDefault();
+  // ---- Change Password Handlers ----
+  const handlePasswordChange = (e) => {
+    setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
+  };
+
+  const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error("Passwords don't match");
+      toast.error("Passwords do not match");
       return;
     }
     if (passwordData.newPassword.length < 6) {
       toast.error("Password must be at least 6 characters");
       return;
     }
-    
-    setChangingPassword(true);
+
     try {
+      setLoading(true);
       await changePassword({
-        currentPassword: passwordData.currentPassword,
+        oldPassword: passwordData.oldPassword,
         newPassword: passwordData.newPassword,
       });
-      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
-      toast.success("Password changed successfully!");
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Password change failed");
+      setShowPasswordModal(false);
+      setPasswordData({ oldPassword: "", newPassword: "", confirmPassword: "" });
+      toast.success("Password updated!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to change password");
     } finally {
-      setChangingPassword(false);
+      setLoading(false);
     }
   };
 
-  const handleDeactivate = async () => {
-    if (!window.confirm("Are you sure you want to deactivate your account? This action cannot be undone.")) return;
-    
+  // ---- Avatar Handlers ----
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) return toast.error("Only images allowed");
+    if (file.size > 2 * 1024 * 1024) return toast.error("Max size 2MB");
+
+    setSelectedFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  };
+
+  const handleUploadAvatar = async () => {
+    if (!selectedFile) return;
+
     try {
+      setUploading(true);
+      const res = await uploadAvatar(selectedFile);
+      setUser((prev) => ({ ...prev, avatar: res.data.data }));
+      setSelectedFile(null);
+      setAvatarPreview(null);
+      toast.success("Avatar updated!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to upload avatar");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // ---- Deactivate Account ----
+  const handleDeactivate = async () => {
+    try {
+      setDeactivating(true);
       await deactivateAccount();
       localStorage.removeItem("token");
-      setToken(null);
-      toast.success("Account deactivated successfully");
+      localStorage.removeItem("userName");
+      toast.success("Account deactivated");
       navigate("/login");
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Deactivation failed");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to deactivate account");
+    } finally {
+      setDeactivating(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto mt-12 space-y-8">
-        <ProfileSkeleton />
-      </div>
-    );
-  }
+  // ⚠️ Loading state while fetching user
+  if (!user) return <div className="flex justify-center items-center h-screen">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <ToastContainer position="top-right" className="toast-container" />
-        
-        {/* Header */}
-        <div className="mb-12">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-                My Profile
-              </h1>
-              <p className="text-lg text-gray-600 mt-1">
-                Update your personal information and avatar
-              </p>
-            </div>
-            {editMode ? (
-              <Button 
-                onClick={handleProfileUpdate} 
-                disabled={saving}
-                className="bg-indigo-600 hover:bg-indigo-700 px-6 py-2.5 rounded-xl font-medium shadow-lg"
-              >
-                {saving ? "Saving..." : "Save Changes"}
-              </Button>
-            ) : (
-              <Button 
-                onClick={() => setEditMode(true)}
-                className="bg-indigo-600 hover:bg-indigo-700 px-6 py-2.5 rounded-xl font-medium shadow-lg"
-              >
-                Edit Profile
-              </Button>
-            )}
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-100 flex flex-col">
+      <Toaster />
+      <Navbar />
+      <main className="flex-1 py-12 px-4">
+        <div className="max-w-2xl mx-auto">
+          <Card className="p-8 shadow-xl">
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Avatar Column */}
-          <div className="lg:col-span-1 space-y-6">
-            <Card className="p-8 text-center">
-              <div className="mb-6">
-                <div className="w-32 h-32 mx-auto rounded-full shadow-2xl border-4 border-white bg-gradient-to-br from-indigo-500 to-purple-600 p-1">
-                  {avatarPreview ? (
-                    <img 
-                      src={avatarPreview} 
-                      alt="Avatar"
-                      className="w-full h-full rounded-full object-cover shadow-2xl"
-                    />
-                  ) : (
-                    <div
-                      className="w-full h-full rounded-full flex items-center justify-center text-2xl font-bold text-white shadow-2xl"
-                      style={{ backgroundColor: stringToColor(formData.name) }}
-                    >
-                      {formData.name ? formData.name[0].toUpperCase() : "U"}
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <div {...getRootProps()} className={`
-                border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center cursor-pointer 
-                transition-all duration-300 hover:border-indigo-400 hover:bg-indigo-50 
-                ${isDragActive ? 'border-indigo-400 bg-indigo-50' : ''}
-                ${uploadingAvatar ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}
-              `}>
-                <input {...getInputProps()} />
-                <div className="space-y-2">
-                  <div className="w-12 h-12 mx-auto bg-indigo-100 rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                  </div>
-                  <p className="text-gray-700 font-medium">Click or drag image to upload</p>
-                  <p className="text-sm text-gray-500">PNG, JPG up to 5MB</p>
-                </div>
-              </div>
-
-              {uploadingAvatar && (
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <div className="flex items-center justify-center space-x-2 text-sm text-indigo-600 font-medium">
-                    <div className="w-5 h-5 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-                    <span>Uploading... {uploadProgress}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                    <div className="bg-indigo-600 h-2 rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
-                  </div>
+            {/* Avatar */}
+            <div className="relative w-32 h-32 mx-auto mb-4">
+              {avatarPreview || user.avatar ? (
+                <img
+                  src={avatarPreview || user.avatar}
+                  alt="avatar"
+                  className="w-32 h-32 rounded-full object-cover shadow-2xl border-4 border-white"
+                />
+              ) : (
+                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-2xl">
+                  <span className="text-4xl font-bold text-white">{initials}</span>
                 </div>
               )}
-            </Card>
-          </div>
+              <label className="absolute bottom-0 right-0 bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-full cursor-pointer shadow-lg">
+                📷
+                <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+              </label>
+            </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Profile Information */}
-            <Card className="p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 border-b pb-4">
-                Profile Information
-              </h2>
-              <form onSubmit={handleProfileUpdate} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Full Name
-                    </label>
-                    <Input
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="Enter your name"
-                      disabled={!editMode}
-                      className={editMode ? "" : "bg-gray-50 cursor-not-allowed"}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email Address
-                    </label>
-                    <Input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="your@email.com"
-                      disabled={!editMode}
-                      className={editMode ? "" : "bg-gray-50 cursor-not-allowed"}
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                  {editMode && (
-                    <Button 
-                      type="submit" 
-                      disabled={saving || !formData.name.trim()}
-                      className="bg-indigo-600 hover:bg-indigo-700 px-8 py-3 rounded-xl font-semibold shadow-lg flex-1 sm:flex-none"
-                    >
-                      {saving ? "Saving..." : "Save Profile"}
-                    </Button>
-                  )}
-                  {!editMode && (
-                    <Button 
-                      type="button"
-                      onClick={() => setEditMode(true)}
-                      className="bg-indigo-600 hover:bg-indigo-700 px-8 py-3 rounded-xl font-semibold shadow-lg"
-                    >
-                      Edit Profile
-                    </Button>
-                  )}
-                  {editMode && (
-                    <Button 
-                      type="button"
-                      onClick={() => {
-                        setFormData({ name: user?.name || "", email: user?.email || "" });
-                        setEditMode(false);
-                      }}
-                      variant="outline"
-                      className="px-8 py-3 rounded-xl font-semibold border-gray-300 hover:bg-gray-50"
-                    >
-                      Cancel
-                    </Button>
-                  )}
-                </div>
-              </form>
-            </Card>
-
-            {/* Security */}
-            <Card className="p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 border-b pb-4">
-                Security
-              </h2>
-              <form onSubmit={handlePasswordChange} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Current Password
-                  </label>
-                  <div className="relative">
-                    <Input
-                      type={showCurrentPassword ? "text" : "password"}
-                      value={passwordData.currentPassword}
-                      onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                      placeholder="Enter current password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    >
-                      {showCurrentPassword ? (
-                        <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      ) : (
-                        <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      New Password
-                    </label>
-                    <div className="relative">
-                      <Input
-                        type={showNewPassword ? "text" : "password"}
-                        value={passwordData.newPassword}
-                        onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                        placeholder="Enter new password"
-                        minLength="6"
-                        required
-                      />
-                      <button
-                        type="button"
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                      >
-                        {showNewPassword ? (
-                          <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                        ) : (
-                          <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Confirm New Password
-                    </label>
-                    <div className="relative">
-                      <Input
-                        type={showConfirmPassword ? "text" : "password"}
-                        value={passwordData.confirmPassword}
-                        onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                        placeholder="Confirm new password"
-                        required
-                      />
-                      <button
-                        type="button"
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      >
-                        {showConfirmPassword ? (
-                          <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057 Ascending 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                        ) : (
-                          <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <Button 
-                  type="submit" 
-                  disabled={changingPassword}
-                  className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 px-8 py-3 rounded-xl font-semibold shadow-lg"
-                >
-                  {changingPassword ? "Changing..." : "Change Password"}
+            {selectedFile && (
+              <div className="flex justify-center mb-4">
+                <Button onClick={handleUploadAvatar} disabled={uploading} className="bg-indigo-600 text-white px-4 py-2 rounded-lg">
+                  {uploading ? "Uploading..." : "Save Photo"}
                 </Button>
-              </form>
-            </Card>
+              </div>
+            )}
 
-            {/* Danger Zone */}
-            <Card className="bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 p-8">
-              <div className="flex items-start space-x-4">
-                <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1">
-                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-red-900 mb-2">Delete Account</h3>
-                  <p className="text-gray-700 mb-6 leading-relaxed">
-                    Permanently delete your account and all associated data. This action cannot be undone.
-                  </p>
-                  <Button
-                    onClick={handleDeactivate}
-                    className="bg-red-600 hover:bg-red-700 text-white px-8 py-2.5 rounded-xl font-semibold shadow-lg border-transparent transition-all duration-200"
-                  >
-                    Deactivate Account
-                  </Button>
+            {/* Name and Email */}
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">{user.name}</h1>
+              <p className="text-gray-600">{user.email}</p>
+            </div>
+
+            {/* Account & Stats */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Account</h3>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between py-2 border-b border-gray-100">
+                    <span>Member since</span>
+                    <span>Jan 2024</span>
+                  </div>
+                  <div className="flex justify-between py-2">
+                    <span>Account status</span>
+                    <span className="font-medium text-emerald-600">Active</span>
+                  </div>
                 </div>
               </div>
-            </Card>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Stats</h3>
+                <div className="grid grid-cols-2 gap-4 text-center p-4 bg-gray-50 rounded-xl">
+                  <div>
+                    <div className="text-2xl font-bold text-indigo-600">12</div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wide">Projects</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-emerald-600">23</div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wide">Tasks</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="mt-8 pt-8 border-t border-gray-200 flex flex-col sm:flex-row gap-4 justify-end">
+              <Button onClick={() => navigate("/dashboard")} className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg">
+                Dashboard
+              </Button>
+              <Button onClick={() => setShowEdit(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-2.5 rounded-xl font-semibold shadow-lg">
+                Edit Profile
+              </Button>
+              <Button onClick={() => setShowPasswordModal(true)} className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg">
+                Change Password
+              </Button>
+            </div>
+
+            {/* Danger Zone */}
+            <div className="mt-10 p-6 border border-red-200 bg-red-50 rounded-2xl">
+              <h3 className="text-lg font-semibold text-red-600 mb-2">Danger Zone</h3>
+              <p className="text-sm text-gray-600 mb-4">Once you deactivate your account, there is no going back.</p>
+              <Button onClick={() => setShowDeactivateModal(true)} className="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-xl">
+                Deactivate Account
+              </Button>
+            </div>
+
+          </Card>
+        </div>
+      </main>
+      <Footer />
+
+      {/* ---------------- MODALS ---------------- */}
+
+      {/* Edit Profile Modal */}
+      {showEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-lg relative">
+            <h2 className="text-xl font-bold mb-4">Edit Profile</h2>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Full Name"
+              className="w-full border border-gray-300 rounded-lg p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <div className="flex justify-end gap-4">
+              <Button
+                onClick={() => setShowEdit(false)}
+                className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpdate}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
+              >
+                Save
+              </Button>
+            </div>
+            <button
+              onClick={() => setShowEdit(false)}
+              className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+            >
+              ✕
+            </button>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Change Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-lg relative">
+            <h2 className="text-xl font-bold mb-4">Change Password</h2>
+            <input
+              type="password"
+              name="oldPassword"
+              value={passwordData.oldPassword}
+              onChange={handlePasswordChange}
+              placeholder="Old Password"
+              className="w-full border border-gray-300 rounded-lg p-2 mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <input
+              type="password"
+              name="newPassword"
+              value={passwordData.newPassword}
+              onChange={handlePasswordChange}
+              placeholder="New Password"
+              className="w-full border border-gray-300 rounded-lg p-2 mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <input
+              type="password"
+              name="confirmPassword"
+              value={passwordData.confirmPassword}
+              onChange={handlePasswordChange}
+              placeholder="Confirm Password"
+              className="w-full border border-gray-300 rounded-lg p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <div className="flex justify-end gap-4">
+              <Button
+                onClick={() => setShowPasswordModal(false)}
+                className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleChangePassword}
+                disabled={loading}
+                className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg"
+              >
+                {loading ? "Saving..." : "Save"}
+              </Button>
+            </div>
+            <button
+              onClick={() => setShowPasswordModal(false)}
+              className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Deactivate Account Modal */}
+      {showDeactivateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-lg relative">
+            <h2 className="text-xl font-bold mb-4 text-red-600">Deactivate Account</h2>
+            <p className="text-gray-700 mb-4">
+              Are you sure you want to deactivate your account? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-4">
+              <Button
+                onClick={() => setShowDeactivateModal(false)}
+                className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDeactivate}
+                disabled={deactivating}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
+              >
+                {deactivating ? "Deactivating..." : "Deactivate"}
+              </Button>
+            </div>
+            <button
+              onClick={() => setShowDeactivateModal(false)}
+              className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

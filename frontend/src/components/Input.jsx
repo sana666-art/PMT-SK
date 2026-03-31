@@ -20,15 +20,17 @@ const Input = forwardRef(({ label, type = "text", placeholder, className, error,
           {label}
         </label>
       )}
-      <input
+
+<input
         ref={ref}
         id={id}
         type={type}
         placeholder={placeholder}
         autoComplete={autocompleteMap[type] || autoComplete || 'off'}
-        className={`p-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-300 transition-all bg-white ${className || ''} ${error ? 'border-red-500' : ''}`}
+        className={`h-12 p-4 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-300 transition-all bg-white ${className || ''} ${error ? 'border-red-500' : ''}`}
         {...props}
       />
+
       {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
     </div>
   );
