@@ -9,7 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { Users, Folder, CheckCircle, Activity, Plus } from 'lucide-react';
 
 const UserHome = () => {
-  const { token } = useAuth();
+  const { token, setUser } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -25,8 +25,7 @@ const UserHome = () => {
         console.log('Profile response:', profileRes.data);
         const name = profileRes.data?.data?.name || 'User';
         setUserName(name.charAt(0).toUpperCase() + name.slice(1).toLowerCase());
-
-
+        setUser(profileRes.data.data);
         
         // Fetch dashboard stats
         const statsRes = await getDashboardStats();

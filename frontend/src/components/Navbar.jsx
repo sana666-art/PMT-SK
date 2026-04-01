@@ -4,6 +4,14 @@ import { useAuth } from '../context/AuthContext.jsx';
 import Logo from '../assets/Logo - PMT-SK.png';
 import { User, ChevronDown, LogOut, Activity } from 'lucide-react';
 
+const getUserAvatar = (user) => {
+  return user?.avatarUrl || user?.avatar;
+};
+
+const getUserInitials = (name) => {
+  return name ? name.charAt(0).toUpperCase() : 'U';
+};
+
 const Navbar = () => {
   const { token, logout } = useAuth();
   const navigate = useNavigate();
@@ -11,8 +19,9 @@ const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const userName = localStorage.getItem('userName') || 'User';
-  const userInitial = userName.charAt(0).toUpperCase();
+  const { user } = useAuth();
+  const userName = user?.name || localStorage.getItem('userName') || 'User';
+  const userInitial = getUserInitials(userName);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -128,16 +137,29 @@ const Navbar = () => {
                     onClick={() => setDropdownOpen(!dropdownOpen)}
                     className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 transition-colors px-2 py-2 rounded-lg hover:bg-gray-100"
                   >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm shadow-lg">
-                      {userInitial}
+                    <div className="w-10 h-10 rounded-full shadow-lg overflow-hidden">
+                      {getUserAvatar(user) ? (
+                        <img 
+                          src={getUserAvatar(user)} 
+                          alt="Profile" 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                          {userInitial}
+                        </div>
+                      )}
                     </div>
                     <ChevronDown className="w-4 h-4 transition-transform rotate-0" />
                   </button>
                   {dropdownOpen && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-2xl border border-gray-200 py-1 z-50">
                       <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="font-semibold text-gray-900">{userName}</p>
-                        <p className="text-sm text-gray-500">Pro User</p>
+                      <p className="font-semibold text-gray-900">{userName}</p>
+                        <p className="text-sm text-gray-500">{user?.role || 'Pro User'}</p>
                       </div>
                       <Link
                         to="/profile"
@@ -246,8 +268,21 @@ const Navbar = () => {
                   </Link>
                   <div className="pt-2">
                     <div className="flex items-center space-x-3 px-3 py-2 bg-indigo-50 rounded-lg mb-2">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
-                        {userInitial}
+                      <div className="w-10 h-10 rounded-full shadow-lg overflow-hidden">
+                        {getUserAvatar(user) ? (
+                          <img 
+                            src={getUserAvatar(user)} 
+                            alt="Profile" 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                            {userInitial}
+                          </div>
+                        )}
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900 text-sm">{userName}</p>

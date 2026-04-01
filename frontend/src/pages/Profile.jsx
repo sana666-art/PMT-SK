@@ -4,15 +4,14 @@ import Card from "../components/Card";
 import Button from "../components/Button";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.jsx";
 import { getProfile, updateProfile, changePassword, uploadAvatar, deactivateAccount } from "../api/userApi.js";
 
 import toast, { Toaster } from "react-hot-toast";
 
 export default function Profile() {
   const navigate = useNavigate();
-
-  // User State
-  const [user, setUser] = useState(null);
+  const { user, setUser } = useAuth();
   const initials = user?.name?.charAt(0)?.toUpperCase() || "U";
 
   // Edit Profile Modal
@@ -37,23 +36,7 @@ export default function Profile() {
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
 
-  // Fetch user
-  useEffect(() => {
-    fetchUser();
-  }, []);
 
-  const fetchUser = async () => {
-    try {
-      const controller = new AbortController();
-      setTimeout(() => controller.abort(), 5000);
-      const res = await getProfile();
-      setUser(res.data.data);
-    } catch (err) {
-      console.error('Profile fetch failed:', err);
-      toast.error("Profile unavailable - cached data used");
-      setUser({ name: localStorage.getItem('userName') || 'User', email: 'user@example.com' });
-    }
-  };
 
 
   // ---- Edit Profile Handlers ----
@@ -128,7 +111,7 @@ export default function Profile() {
     try {
       setUploading(true);
       const res = await uploadAvatar(selectedFile);
-      setUser((prev) => ({ ...prev, avatar: res.data.data }));
+      setUser(res.data.data);
       setSelectedFile(null);
       setAvatarPreview(null);
       toast.success("Avatar updated!");
