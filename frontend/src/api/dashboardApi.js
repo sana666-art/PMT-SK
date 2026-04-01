@@ -1,5 +1,6 @@
 import API from './axios';
-import { getProfile } from './userApi';
+import { getProfile } from "./userApi";
+
 
 // Dashboard stats & data
 export const getDashboardStats = async () => {
@@ -16,9 +17,9 @@ export const getDashboardStats = async () => {
     
     // Parallel requests for performance
     const [allProjectsRes, allTasksRes, assigneeTasksRes] = await Promise.all([
-      API.get('/projects'),
-      API.get('/tasks'),
-      API.get(`/tasks/assignee/${userId}`)
+      API.get('/api/projects'),
+      API.get('/api/tasks'),
+      API.get(`/api/tasks/assignee/${userId}`)
     ]);
 
     const projects = allProjectsRes.data?.data || allProjectsRes.data || [];

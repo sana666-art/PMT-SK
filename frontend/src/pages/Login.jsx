@@ -20,7 +20,7 @@ export default function Login() {
 
   useEffect(() => {
     if (token) {
-      console.log("Token detected, navigating to user home");
+      // console.log("Token detected, navigating to user home");
       navigate("/user-home", { replace: true });
     }
   }, [token, navigate]);
@@ -50,7 +50,7 @@ export default function Login() {
       return;
     }
 
-    console.log("Attempting login with:", { email: emailTrimmed, password: '[HIDDEN]' });
+    // console.log("Attempting login with:", { email: emailTrimmed, password: '[HIDDEN]' });
     
     setLoading(true);
     setError("");
@@ -59,7 +59,8 @@ export default function Login() {
         email: emailTrimmed, 
         password: passwordTrimmed 
       });
-      console.log("Login response:", res.data);
+      // console.log("Login response:", res.data);
+      // const tokenPayload = res.data.data.token;
       const tokenPayload = res.data.message;
 localStorage.setItem('userName', (emailTrimmed.split('@')[0].replace(/[^a-zA-Z]/g, ' ').trim() || 'User').charAt(0).toUpperCase() + (emailTrimmed.split('@')[0].replace(/[^a-zA-Z]/g, ' ').trim() || 'User').slice(1).toLowerCase()); // Capitalized temp from email
       login(tokenPayload);

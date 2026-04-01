@@ -184,9 +184,9 @@ export default function Profile() {
 
             {/* Avatar */}
             <div className="relative w-32 h-32 mx-auto mb-4">
-              {avatarPreview || user.avatar ? (
+              {avatarPreview || user.avatarUrl ? (
                 <img
-                  src={avatarPreview || user.avatar}
+                  src={avatarPreview || user.avatarUrl}
                   alt="avatar"
                   className="w-32 h-32 rounded-full object-cover shadow-2xl border-4 border-white"
                 />
