@@ -27,8 +27,23 @@ API.interceptors.request.use((req) => {
 
 API.interceptors.response.use(
   (res) => res,
-  (err) => {
+  async (err) => {
     console.error('API Error:', err.message, err.response?.status, err.config?.url);
+    if (err.response?.status === 401) {
+      console.log('401 detected - logging out and redirecting');
+      try {
+        // Dynamic import to avoid context dependency
+        const { logout } = await import('../context/AuthContext.jsx');
+        logout();
+      } catch (importErr) {
+        console.warn('Could not call logout:', importErr);
+      }
+      localStorage.removeItem('token');
+      localStorage.removeItem('userName');
+      if (typeof window !== 'undefined' && window.location) {
+        window.location.href = '/login';
+      }
+    }
     return Promise.reject(err);
   }
 );

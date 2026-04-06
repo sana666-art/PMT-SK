@@ -59,10 +59,13 @@ export default function Login() {
         email: emailTrimmed, 
         password: passwordTrimmed 
       });
-      // console.log("Login response:", res.data);
-      // const tokenPayload = res.data.data.token;
-      const tokenPayload = res.data.message;
-localStorage.setItem('userName', (emailTrimmed.split('@')[0].replace(/[^a-zA-Z]/g, ' ').trim() || 'User').charAt(0).toUpperCase() + (emailTrimmed.split('@')[0].replace(/[^a-zA-Z]/g, ' ').trim() || 'User').slice(1).toLowerCase()); // Capitalized temp from email
+      console.log("Login response full:", res.data);
+      const tokenPayload = res.data.data?.token || res.data.token || res.data.message;
+      console.log("Extracted token:", tokenPayload ? "Found" : "NOT FOUND", tokenPayload?.substring(0, 20) + "...");
+      if (!tokenPayload) {
+        throw new Error("No token found in response");
+      }
+      localStorage.setItem('userName', (emailTrimmed.split('@')[0].replace(/[^a-zA-Z]/g, ' ').trim() || 'User').charAt(0).toUpperCase() + (emailTrimmed.split('@')[0].replace(/[^a-zA-Z]/g, ' ').trim() || 'User').slice(1).toLowerCase());
       login(tokenPayload);
 
       // Navigate handled by useEffect watching token

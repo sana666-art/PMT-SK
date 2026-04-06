@@ -32,13 +32,17 @@ const UserHome = () => {
         setStats(statsRes.data.data);
       } catch (err) {
         console.error('Load data error:', err);
+        if (err.response?.status === 401) {
+          console.log('UserHome 401 - logging out');
+          logout();
+        }
         setUserName((localStorage.getItem('userName') || 'User').charAt(0).toUpperCase() + (localStorage.getItem('userName') || 'User').slice(1).toLowerCase());
       } finally {
         setLoading(false);
       }
     };
     if (token) loadData();
-  }, [token]);
+  }, [token, logout]);
 
 
   if (loading) {

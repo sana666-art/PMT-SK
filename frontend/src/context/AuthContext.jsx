@@ -17,6 +17,10 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (err) {
       console.error("Failed to fetch profile:", err);
+      if (err.response?.status === 401) {
+        console.log("Profile fetch 401 - invalid token, logging out");
+        logout();
+      }
       setUser(null);
     }
   };
