@@ -41,11 +41,7 @@ public class UserController {
         );
     }
 
-<<<<<<< HEAD
     @PreAuthorize("isAuthenticated()")
-=======
-    @PreAuthorize("hasAuthority('VIEW_USERS')")
->>>>>>> 9e81d15560c3d81865d4d31f9a59a7fa9f0d8b68
     @GetMapping
     public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers() {
 
@@ -134,11 +130,7 @@ public class UserController {
         );
     }
 
-<<<<<<< HEAD
     @PreAuthorize("isAuthenticated()")
-=======
-    @PreAuthorize("hasAuthority('DELETE_USER')")
->>>>>>> 9e81d15560c3d81865d4d31f9a59a7fa9f0d8b68
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
 

@@ -164,8 +164,6 @@ public class TaskServiceImpl implements TaskService {
         return TaskMapper.toResponse(taskRepository.save(task));
     }
 
-<<<<<<< HEAD
-=======
     // ================= GET TASKS BY ASSIGNEE =================
     @Override
     public List<TaskResponse> getTasksByAssignee(Long userId, CustomUserDetails userDetails) {
@@ -214,5 +212,4 @@ public class TaskServiceImpl implements TaskService {
                 .anyMatch(member -> member.getId().equals(user.getId()));
         return isAssignee || isProjectMember;
     }
->>>>>>> 9e81d15560c3d81865d4d31f9a59a7fa9f0d8b68
 }
