@@ -29,7 +29,6 @@ public class UserController {
         this.userService = userService;
     }
 
-//    @PreAuthorize("hasAuthority('ADMIN')")
     @PreAuthorize("isAuthenticated()")
     @PostMapping
     public ResponseEntity<ApiResponse<UserResponse>> createUser(
@@ -42,7 +41,6 @@ public class UserController {
         );
     }
 
-//    @PreAuthorize("hasAuthority('ADMIN')")
     @PreAuthorize("isAuthenticated()")
     @GetMapping
     public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers() {
@@ -56,6 +54,7 @@ public class UserController {
                 new ApiResponse<>(true, "Users fetched successfully", users)
         );
     }
+
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserResponse>> getCurrentUser(Authentication authentication) {
@@ -131,6 +130,7 @@ public class UserController {
         );
     }
 
+    @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
 
