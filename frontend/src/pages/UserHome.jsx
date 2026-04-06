@@ -9,7 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { Users, Folder, CheckCircle, Activity, Plus } from 'lucide-react';
 
 const UserHome = () => {
-  const { token, setUser } = useAuth();
+  const { token, setUser, logout } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -22,19 +22,26 @@ const UserHome = () => {
         setLoading(true);
         // Fetch user profile
         const profileRes = await getProfile();
-        console.log('Profile response:', profileRes.data);
-        const name = profileRes.data?.data?.name || 'User';
+        console.log('Profile response:', profileRes);
+        const profileData = profileRes?.data?.data;
+        if (!profileData) {
+          throw new Error('Invalid profile response');
+        }
+        const name = profileData.name || 'User';
         setUserName(name.charAt(0).toUpperCase() + name.slice(1).toLowerCase());
-        setUser(profileRes.data.data);
+        setUser(profileData);
         
         // Fetch dashboard stats
         const statsRes = await getDashboardStats();
-        setStats(statsRes.data.data);
+        const statsData = statsRes?.data?.data || {};
+        setStats(statsData);
       } catch (err) {
         console.error('Load data error:', err);
         if (err.response?.status === 401) {
           console.log('UserHome 401 - logging out');
           logout();
+        } else if (err.response && !err.response.data) {
+          console.log('API response missing data');
         }
         setUserName((localStorage.getItem('userName') || 'User').charAt(0).toUpperCase() + (localStorage.getItem('userName') || 'User').slice(1).toLowerCase());
       } finally {
@@ -42,7 +49,7 @@ const UserHome = () => {
       }
     };
     if (token) loadData();
-  }, [token, logout]);
+  }, [token]);
 
 
   if (loading) {
