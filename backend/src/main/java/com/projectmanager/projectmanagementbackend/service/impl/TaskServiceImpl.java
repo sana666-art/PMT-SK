@@ -5,17 +5,14 @@ import com.projectmanager.projectmanagementbackend.dto.response.TaskResponse;
 import com.projectmanager.projectmanagementbackend.entity.Project;
 import com.projectmanager.projectmanagementbackend.entity.Task;
 import com.projectmanager.projectmanagementbackend.entity.User;
-import com.projectmanager.projectmanagementbackend.entity.enums.Permission;
 import com.projectmanager.projectmanagementbackend.entity.enums.TaskPriority;
 import com.projectmanager.projectmanagementbackend.entity.enums.TaskStatus;
-import com.projectmanager.projectmanagementbackend.exception.AccessDeniedException;
 import com.projectmanager.projectmanagementbackend.exception.ResourceNotFoundException;
 import com.projectmanager.projectmanagementbackend.mapper.TaskMapper;
 import com.projectmanager.projectmanagementbackend.repository.ProjectRepository;
 import com.projectmanager.projectmanagementbackend.repository.TaskRepository;
 import com.projectmanager.projectmanagementbackend.repository.UserRepository;
 import com.projectmanager.projectmanagementbackend.service.TaskService;
-import com.projectmanager.projectmanagementbackend.service.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -29,26 +26,24 @@ public class TaskServiceImpl implements TaskService {
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
 
-    // ================= CREATE TASK =================
+    /*
+        CREATE TASK
+     */
     @Override
-    public TaskResponse createTask(TaskRequest request, CustomUserDetails userDetails) {
+    public TaskResponse createTask(TaskRequest request) {
 
-        User user = userDetails.user();
+        // 1️⃣ Fetch project
+        var project = projectRepository.findById(request.getProjectId())
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
-        if (!user.getRole().getPermissions().contains(Permission.CREATE_TASK)) {
-            throw new AccessDeniedException("You don't have permission to create tasks");
-        }
+        // 2️⃣ Fetch assignee (optional)
+        var assignee = request.getAssigneeId() != null ?
+                userRepository.findById(request.getAssigneeId())
+                        .orElseThrow(() -> new RuntimeException("Assignee not found"))
+                : null;
 
-        Project project = projectRepository.findById(request.getProjectId())
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
-
-        User assignee = null;
-        if (request.getAssigneeId() != null) {
-            assignee = userRepository.findById(request.getAssigneeId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Assignee not found"));
-        }
-
-        Task task = new Task();
+        // 3️⃣ Map request to entity
+        var task = new Task();
         task.setTitle(request.getTitle());
         task.setDescription(request.getDescription());
         task.setPriority(TaskPriority.valueOf(request.getPriority()));
@@ -57,159 +52,131 @@ public class TaskServiceImpl implements TaskService {
         task.setProject(project);
         task.setAssignee(assignee);
 
-        return TaskMapper.toResponse(taskRepository.save(task));
+        // 4️⃣ Save and return response DTO
+        var saved = taskRepository.save(task);
+        return TaskMapper.toResponse(saved);
     }
 
-    // ================= GET ALL TASKS =================
+    /*
+        GET ALL TASKS
+     */
     @Override
-    public List<TaskResponse> getTasks(CustomUserDetails userDetails) {
+    public List<TaskResponse> getAllTasks() {
 
-        User user = userDetails.user();
-
-        if (user.getRole().getPermissions().contains(Permission.VIEW_ALL_TASKS)) {
-            return taskRepository.findAll().stream()
-                    .map(TaskMapper::toResponse).toList();
-        }
-
-        // Only tasks where user is assignee or project member
-        return taskRepository.findAll().stream()
-                .filter(task -> isTaskAccessible(task, user))
-                .map(TaskMapper::toResponse).toList();
+        return taskRepository
+                .findAll()
+                .stream()
+                .map(TaskMapper::toResponse)
+                .toList();
     }
 
-    // ================= GET TASK BY ID =================
+    /*
+        GET TASK BY ID
+     */
     @Override
-    public TaskResponse getTaskById(Long id, CustomUserDetails userDetails) {
-
-        User user = userDetails.user();
+    public TaskResponse getTaskById(Long id) {
 
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
-        if (!user.getRole().getPermissions().contains(Permission.VIEW_ALL_TASKS) &&
-                !isTaskAccessible(task, user)) {
-            throw new AccessDeniedException("You are not allowed to view this task");
-        }
-
         return TaskMapper.toResponse(task);
     }
 
-    // ================= UPDATE TASK =================
+    /*
+        UPDATE TASK
+     */
     @Override
-    public TaskResponse updateTask(Long taskId, TaskRequest request, CustomUserDetails userDetails) {
+    public TaskResponse updateTask(Long taskId, TaskRequest request) {
 
-        User user = userDetails.user();
-
+        // 1️⃣ Fetch task
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
-        if (!user.getRole().getPermissions().contains(Permission.UPDATE_TASK) ||
-                !isTaskAccessible(task, user)) {
-            throw new AccessDeniedException("You are not allowed to update this task");
-        }
-
+        // 2️⃣ Update fields
         task.setTitle(request.getTitle());
         task.setDescription(request.getDescription());
         task.setPriority(TaskPriority.valueOf(request.getPriority()));
         task.setDueDate(request.getDueDate());
 
+        // Update status only if provided
         if (request.getStatus() != null) {
             task.setStatus(request.getStatus());
         }
 
+        // 3️⃣ Update assignee if provided
         if (request.getAssigneeId() != null) {
             User assignee = userRepository.findById(request.getAssigneeId())
                     .orElseThrow(() -> new ResourceNotFoundException("Assignee not found"));
             task.setAssignee(assignee);
         }
 
-        return TaskMapper.toResponse(taskRepository.save(task));
+        // 4️⃣ Save and return DTO
+        Task updated = taskRepository.save(task);
+        return TaskMapper.toResponse(updated);
     }
 
-    // ================= DELETE TASK =================
+    /*
+        DELETE TASK
+     */
     @Override
-    public void deleteTask(Long taskId, CustomUserDetails userDetails) {
+    public void deleteTask(Long id) {
 
-        User user = userDetails.user();
-
-        Task task = taskRepository.findById(taskId)
+        Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
-
-        if (!user.getRole().getPermissions().contains(Permission.DELETE_TASK) ||
-                !isTaskAccessible(task, user)) {
-            throw new AccessDeniedException("You are not allowed to delete this task");
-        }
 
         taskRepository.delete(task);
     }
 
-    // ================= ASSIGN TASK =================
+    /*
+        GET TASKS BY PROJECT
+     */
     @Override
-    public TaskResponse assignTask(Long taskId, Long assigneeId, CustomUserDetails userDetails) {
+    public List<TaskResponse> getTasksByProject(Long projectId) {
 
-        User user = userDetails.user();
+        // Check if project exists
+        projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
-        if (!user.getRole().getPermissions().contains(Permission.ASSIGN_TASK)) {
-            throw new AccessDeniedException("You are not allowed to assign tasks");
-        }
+        // Fetch tasks
+        List<Task> tasks = taskRepository.findByProjectId(projectId);
 
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
-
-        User assignee = userRepository.findById(assigneeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Assignee not found"));
-
-        task.setAssignee(assignee);
-
-        return TaskMapper.toResponse(taskRepository.save(task));
+        // Map to DTOs
+        return tasks.stream()
+                .map(TaskMapper::toResponse)
+                .toList();
     }
 
-    // ================= GET TASKS BY ASSIGNEE =================
+    /*
+        GET TASKS BY ASSIGNEE
+     */
     @Override
-    public List<TaskResponse> getTasksByAssignee(Long userId, CustomUserDetails userDetails) {
+    public List<TaskResponse> getTasksByAssignee(Long userId) {
 
-        User user = userDetails.user();
+        // Check if user exists
+        userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (!user.getRole().getPermissions().contains(Permission.VIEW_TASK)) {
-            throw new AccessDeniedException("You are not allowed to view tasks");
-        }
-
+        // Fetch tasks
         List<Task> tasks = taskRepository.findByAssigneeId(userId);
 
-        // Apply ownership filter if user is not admin
-        if (!user.getRole().getPermissions().contains(Permission.VIEW_ALL_TASKS)) {
-            tasks = tasks.stream()
-                    .filter(task -> isTaskAccessible(task, user))
-                    .toList();
-        }
-
-        return tasks.stream().map(TaskMapper::toResponse).toList();
+        // Map to DTOs
+        return tasks.stream()
+                .map(TaskMapper::toResponse)
+                .toList();
     }
 
-    // ================= UPDATE TASK STATUS =================
+    /*
+        UPDATE TASK STATUS (KANBAN)
+     */
     @Override
-    public TaskResponse updateTaskStatus(Long taskId, TaskStatus status, CustomUserDetails userDetails) {
-
-        User user = userDetails.user();
-
+    public TaskResponse updateTaskStatus(Long taskId, TaskStatus status) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
-        if (!user.getRole().getPermissions().contains(Permission.UPDATE_TASK) ||
-                !isTaskAccessible(task, user)) {
-            throw new AccessDeniedException("You are not allowed to update this task");
-        }
-
         task.setStatus(status);
-        return TaskMapper.toResponse(taskRepository.save(task));
+        Task updated = taskRepository.save(task);
+
+        return TaskMapper.toResponse(updated);
     }
 
-    // ================= HELPER =================
-    private boolean isTaskAccessible(Task task, User user) {
-        boolean isAssignee = task.getAssignee() != null && task.getAssignee().getId().equals(user.getId());
-        boolean isProjectMember = task.getProject().getMembers()
-                .stream()
-                .anyMatch(member -> member.getId().equals(user.getId()));
-        return isAssignee || isProjectMember;
-    }
 }
