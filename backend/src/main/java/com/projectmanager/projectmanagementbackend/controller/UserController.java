@@ -41,7 +41,11 @@ public class UserController {
         );
     }
 
+<<<<<<< HEAD
     @PreAuthorize("isAuthenticated()")
+=======
+    @PreAuthorize("hasAuthority('VIEW_USERS')")
+>>>>>>> 9e81d15560c3d81865d4d31f9a59a7fa9f0d8b68
     @GetMapping
     public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers() {
 
@@ -70,7 +74,7 @@ public class UserController {
         );
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('UPDATE_USER')")
     @PutMapping("/me")
     public ResponseEntity<ApiResponse<UserResponse>> updateMyProfile(
             Authentication authentication,
@@ -86,7 +90,7 @@ public class UserController {
         );
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('UPDATE_USER')")
     @PutMapping("/change-password")
     public ResponseEntity<ApiResponse<String>> changePassword(
             Authentication authentication,
@@ -102,7 +106,7 @@ public class UserController {
         );
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('DELETE_USER')")
     @PutMapping("/deactivate")
     public ResponseEntity<ApiResponse<String>> deactivateAccount(Authentication authentication) {
 
@@ -115,7 +119,7 @@ public class UserController {
         );
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('UPDATE_USER')")
     @PutMapping("/me/avatar")
     public ResponseEntity<ApiResponse<String>> uploadAvatar(
             @RequestParam("file") MultipartFile file,
@@ -130,7 +134,11 @@ public class UserController {
         );
     }
 
+<<<<<<< HEAD
     @PreAuthorize("isAuthenticated()")
+=======
+    @PreAuthorize("hasAuthority('DELETE_USER')")
+>>>>>>> 9e81d15560c3d81865d4d31f9a59a7fa9f0d8b68
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
 
@@ -141,6 +149,7 @@ public class UserController {
         );
     }
 
+//    @PreAuthorize("hasAuthority('VIEW_USERS')")
 //    @GetMapping("/{id}")
 //    public ResponseEntity<ApiResponse<UserResponse>> getUserById(@PathVariable Long id) {
 //
@@ -150,7 +159,7 @@ public class UserController {
 //                new ApiResponse<>(true, "User fetched successfully", user)
 //        );
 //    }
-//
+//    @PreAuthorize("hasAuthority('UPDATE_USER')")
 //    @PutMapping("/{id}")
 //    public ResponseEntity<ApiResponse<UserResponse>> updateUser(
 //            @PathVariable Long id,
