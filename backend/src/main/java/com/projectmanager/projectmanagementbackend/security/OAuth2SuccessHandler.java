@@ -46,7 +46,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                     User newUser = new User();
                     newUser.setEmail(finalEmail);
                     newUser.setName(username);
-                    newUser.setRole(Role.valueOf("ROLE_USER")); // adjust based on your enum
+                    newUser.setRole(Role.valueOf("ROLE_USER"));
                     return userRepository.save(newUser);
                 });
 
